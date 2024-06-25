@@ -15,47 +15,6 @@ const getFavouritesBtn = document.getElementById('getFavouritesBtn');
 const API_KEY =
   'live_rQuGkCSYNJ1pqluPQJVSr6aQF5I5BmO6KRpIZb743yJdiC6SVH3DMR1fR0GCJsaV';
 
-/* defaults for every request */
-axios.defaults.baseURL = 'https://api.thecatapi.com/v1/';
-axios.defaults.headers.common['x-api-key'] = API_KEY;
-
-// /* Axios interceptors */
-// const requestInterceptor = axios.interceptors.request.use(function (request) {
-axios.interceptors.request.use(function (request) {
-  let timeStart = new Date().getTime();
-  console.log('timeStart for the request:', timeStart);
-  // assign metadata to the request object if it doesn't exist
-  request.metadata = request.metadata || {};
-  request.metadata.startTime = timeStart;
-  return request;
-});
-
-// axios.interceptors.request.use((request) => {
-//   request.metadata = request.metadata || {};
-//   // assign property startTime onto the request.metadata object
-//   request.metadata.startTime = new Date().getTime();
-
-//   return request;
-
-// });
-
-// for the response interceptor axios passes the request object metadata property and sets it on the response.config
-axios.interceptors.response.use(
-  function (response) {
-    let endTime = new Date().getTime();
-    console.log(
-      'does the response take the properties of the request object -> startTime:',
-      response.config.metadata.startTime
-    );
-    let duration = endTime - response.config.metadata.startTime;
-    console.log('the duration of the request -> duration:', duration);
-    return response;
-  },
-  function (error) {
-    return Promise.reject(error);
-  }
-);
-
 /**
  * 1. Create an async function "initialLoad" that does the following:
  * - Retrieve a list of breeds from the cat API using fetch().
@@ -64,10 +23,14 @@ axios.interceptors.response.use(
  *  - Each option should display text equal to the name of the breed.
  * This function should execute immediately.
  */
-const getRequest = async (url) => {
+const fetchRequest = async (url) => {
   try {
-    const result = await axios.get(url);
-    console.log('result:', result.data);
+    const result = await fetch(url, {
+      headers: {
+        'x-api-key': API_KEY,
+      },
+    });
+    const res = await result.json();
     return res;
   } catch (error) {
     console.log('error');
@@ -76,18 +39,21 @@ const getRequest = async (url) => {
 
 const initialLoad = async function () {
   try {
-    const res = await axios.get('breeds');
+    const res = await fetchRequest('https://api.thecatapi.com/v1/breeds');
     let defaultOption = document.createElement('option');
     defaultOption.textContent = 'Choose a breed';
     breedSelect.appendChild(defaultOption);
     console.log('initialLoad() - res:', res);
 
-    res.data.forEach((breed) => {
-      const { id, name, image } = breed;
+    res.forEach((breed) => {
+      let { id, name, image } = breed;
       let optionEl = document.createElement('option');
       optionEl.setAttribute('value', id);
       optionEl.textContent = `${name}`;
-
+      optionEl.addEventListener('select', (e) => {
+        e.preventDefault();
+        console.log('this was selected:', e.target.value);
+      });
       breedSelect.appendChild(optionEl);
 
       if (breed.image) {
@@ -98,6 +64,7 @@ const initialLoad = async function () {
         );
         Carousel.appendCarousel(carouselItem);
         Carousel.start();
+        console.log('in initial load:', carouselItem);
       }
     });
     return res;
@@ -141,35 +108,44 @@ const showBreedInfo = function (breedObj) {
   `;
 };
 
-const getCatBreedById = async (breedId) => {
-  const res = await axios.get(
-    `images/search?limit=10&breed_ids=${breedId}&has_breeds=1`
-  );
+const getCatBreed = async (breedId) => {
+  console.log('in getCatBreed -> breedId:', breedId);
+  // const breedInfoResponse = await fetchRequest(
+  //   `https://api.thecatapi.com/v1/breeds/search?breed_ids=${breedId}`
+  // );
+  // console.log('breedInfoResponse:', breedInfoResponse[0]);
+  // grab the list of breeds again! ugh!
+  const breedList = await fetchRequest(`https://api.thecatapi.com/v1/breeds`);
 
+  // filter the list to get the breed that matches the breedId passed in
+  const selectedBreedInfo = breedList.filter(
+    (breed) => breed.id === breedId
+  )[0];
+
+  // console.log('breedInfo:', selectedBreedInfo);
   // clear the Carousel
   Carousel.clear();
 
-  res.data.forEach((img) => {
-    // store the selected cat Carousel item
-    let selectedCatImage = Carousel.createCarouselItem(
-      img.url,
-      `Picture of a ${img.breeds[0].name} cat`,
-      img.id
-    );
+  // store the selected cat Carousel item
+  let selectedCat = Carousel.createCarouselItem(
+    selectedBreedInfo.image.url,
+    `Picture of a ${selectedBreedInfo} cat`,
+    selectedBreedInfo.image.id
+  );
 
-    // append the current carousel item to the Carousel
-    Carousel.appendCarousel(selectedCatImage);
+  // append the current carousel item to the Carousel
+  console.log('seelected cat:', selectedCat);
+  Carousel.appendCarousel(selectedCat);
 
-    // add the selected breed to the info Dump element
-    showBreedInfo(img.breeds[0]);
-  });
+  // add the selected breed to the info Dump element
+  showBreedInfo(selectedBreedInfo);
 };
 
 breedSelect.addEventListener('click', (e) => {
   // console.log('target value:', e.target, e.target.value);
   breedSelect.addEventListener('change', (e) => {
     console.log('target:', e.target.value);
-    let selectedBreed = getCatBreedById(e.target.value);
+    let selectedBreed = getCatBreed(e.target.value);
     console.log('in event listener:', selectedBreed);
   });
 });
