@@ -1,4 +1,3 @@
-import { get } from 'jquery';
 import * as Carousel from './Carousel.js';
 import axios from 'axios';
 
@@ -126,29 +125,16 @@ initialLoad();
  * - Add a call to this function to the end of your initialLoad function above to create the initial carousel.
  */
 
-/**
- * 
- progressEvent will be an object {
-  loaded: 9565,
-  total: 222,
-  progress: 1,
-  bytes: 9565,
-  event: Event Object,
-  download: true,
-
- }
- */
-
 const updateProgess = function (progressEvent) {
   const percentageDownloaded = Math.round(
     (progressEvent.loaded * 100) / progressEvent.total
   );
-  console.log(
-    'in updateProgress function -> progressEvent object:',
-    progressEvent,
-    'percentage:',
-    percentageDownloaded
-  );
+  // console.log(
+  //   'in updateProgress function -> progressEvent object:',
+  //   progressEvent,
+  //   'percentage:',
+  //   percentageDownloaded
+  // );
   progressBar.style.width = `${percentageDownloaded}%`;
 };
 
